@@ -1,0 +1,1102 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>AI NGAJI | Deteksi Tajwid & Koreksi Bacaan Quran</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&family=Amiri:wght@400;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-color: #030b17;
+            --text-color: #fff;
+            --card-bg: rgba(15, 25, 35, 0.7);
+            --header-bg: rgba(10, 20, 30, 0.55);
+            --border-color: rgba(212, 175, 55, 0.25);
+            --select-bg: rgba(0, 0, 0, 0.6);
+            --box-bg: rgba(0, 0, 0, 0.5);
+            --ayat-card-bg: rgba(5, 12, 22, 0.7);
+            --ayat-text-color: #f5e6c4;
+            --latin-text-color: #ccc;
+            --badge-bg: rgba(212, 175, 55, 0.2);
+            --btn-secondary-bg: rgba(30, 40, 55, 0.9);
+            --scroll-track: #0a121f;
+            --error-bg: rgba(248, 113, 113, 0.15);
+            --error-border: #f87171;
+            --warning-bg: rgba(251, 191, 36, 0.15);
+            --warning-border: #fbbf24;
+            --correct-bg: rgba(74, 222, 128, 0.15);
+            --correct-border: #4ade80;
+        }
+
+        [data-theme="light"] {
+            --bg-color: #f4f7fc;
+            --text-color: #1e293b;
+            --card-bg: rgba(255, 255, 255, 0.85);
+            --header-bg: rgba(255, 255, 255, 0.9);
+            --border-color: rgba(212, 175, 55, 0.5);
+            --select-bg: rgba(255, 255, 255, 0.9);
+            --box-bg: rgba(241, 245, 249, 0.9);
+            --ayat-card-bg: rgba(255, 255, 255, 0.95);
+            --ayat-text-color: #050505;
+            --latin-text-color: #475569;
+            --badge-bg: rgba(212, 175, 55, 0.15);
+            --btn-secondary-bg: rgba(226, 232, 240, 0.9);
+            --scroll-track: #e2e8f0;
+            --error-bg: rgba(248, 113, 113, 0.2);
+            --warning-bg: rgba(251, 191, 36, 0.15);
+            --correct-bg: rgba(74, 222, 128, 0.15);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+            background: var(--bg-color);
+            color: var(--text-color);
+            transition: background 0.5s ease, color 0.5s ease;
+        }
+
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            transition: opacity 0.5s ease;
+        }
+
+        [data-theme="light"] #canvas-container {
+            opacity: 0.15;
+        }
+
+        .app-wrapper {
+            position: relative;
+            z-index: 10;
+            min-height: 100vh;
+            padding: 1.5rem;
+            backdrop-filter: blur(2px);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            background: var(--header-bg);
+            backdrop-filter: blur(12px);
+            padding: 1rem 1.8rem;
+            border-radius: 2rem;
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+        }
+
+        .logo h1 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #FFE6B0, #D4AF37);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        [data-theme="light"] .logo h1 {
+            background: linear-gradient(135deg, #00693E, #D4AF37);
+            -webkit-background-clip: text;
+            background-clip: text;
+        }
+
+        .logo p {
+            font-size: 0.75rem;
+            opacity: 0.7;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .badge {
+            background: var(--badge-bg);
+            padding: 0.4rem 1rem;
+            border-radius: 2rem;
+            font-size: 0.8rem;
+            border: 1px solid rgba(212, 175, 55, 0.5);
+            color: var(--text-color);
+        }
+
+        .theme-toggle-btn {
+            background: var(--badge-bg);
+            border: 1px solid rgba(212, 175, 55, 0.5);
+            color: var(--text-color);
+            padding: 0.5rem 1rem;
+            border-radius: 2rem;
+            cursor: pointer;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .theme-toggle-btn:hover {
+            transform: scale(1.05);
+            background: rgba(212, 175, 55, 0.3);
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr;
+            gap: 1.8rem;
+        }
+
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border-radius: 1.8rem;
+            padding: 1.5rem;
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .card:hover {
+            border-color: rgba(212, 175, 55, 0.6);
+            box-shadow: 0 0 20px rgba(212, 175, 55, 0.1);
+        }
+
+        .card-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            border-left: 3px solid #D4AF37;
+            padding-left: 0.8rem;
+        }
+
+        .select-surah {
+            width: 100%;
+            padding: 0.9rem 1rem;
+            background: var(--select-bg);
+            border: 1px solid rgba(212, 175, 55, 0.5);
+            border-radius: 1.2rem;
+            color: var(--text-color);
+            font-size: 1rem;
+            cursor: pointer;
+            margin-bottom: 1.2rem;
+            font-family: inherit;
+            transition: all 0.3s ease;
+        }
+
+        .select-surah option {
+            background: #0a121f;
+            color: #fff;
+        }
+
+        [data-theme="light"] .select-surah option {
+            background: #fff;
+            color: #1e293b;
+        }
+
+        .surah-text-container {
+            background: var(--box-bg);
+            border-radius: 1.2rem;
+            padding: 1rem;
+            max-height: 450px;
+            overflow-y: auto;
+            transition: all 0.3s ease;
+        }
+
+        .ayat-item-card {
+            background: var(--ayat-card-bg);
+            border-radius: 1rem;
+            padding: 1.2rem;
+            margin-bottom: 1rem;
+            border: 1px solid rgba(212, 175, 55, 0.15);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .ayat-item-card:last-child {
+            margin-bottom: 0;
+        }
+
+        .ayat-item-card:hover {
+            border-color: rgba(212, 175, 55, 0.4);
+            transform: translateY(-2px);
+        }
+
+        /* Highlight untuk ayat yang error */
+        .ayat-item-card.ayat-error {
+            border: 2px solid #f87171;
+            background: var(--error-bg);
+            animation: shake 0.3s ease-in-out;
+        }
+
+        .ayat-item-card.ayat-warning {
+            border: 2px solid #fbbf24;
+            background: var(--warning-bg);
+        }
+
+        .ayat-item-card.ayat-correct {
+            border: 1px solid rgba(212, 175, 55, 0.15);
+        }
+
+        @keyframes shake {
+
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+
+            25% {
+                transform: translateX(-5px);
+            }
+
+            75% {
+                transform: translateX(5px);
+            }
+        }
+
+        .ayat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.8rem;
+            border-bottom: 1px dashed rgba(212, 175, 55, 0.2);
+            padding-bottom: 0.4rem;
+        }
+
+        .ayat-number {
+            background: rgba(212, 175, 55, 0.25);
+            color: #D4AF37;
+            font-weight: 700;
+            font-size: 0.8rem;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #D4AF37;
+        }
+
+        .arabic-text {
+            font-family: 'Amiri', 'Times New Roman', serif;
+            font-size: 1.6rem;
+            font-weight: 500;
+            line-height: 2.2;
+            text-align: right;
+            direction: rtl;
+            color: var(--ayat-text-color);
+        }
+
+        .latin-text {
+            font-size: 0.95rem;
+            color: var(--latin-text-color);
+            direction: ltr;
+            text-align: left;
+            margin-top: 0.6rem;
+            line-height: 1.5;
+        }
+
+        .recording-area {
+            margin: 1rem 0;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 2rem;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: inherit;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(95deg, #D4AF37, #B88A1A);
+            color: #0a1219;
+        }
+
+        .btn-primary:hover {
+            transform: scale(1.02);
+            box-shadow: 0 0 12px rgba(212, 175, 55, 0.6);
+        }
+
+        .btn-secondary {
+            background: var(--btn-secondary-bg);
+            border: 1px solid #D4AF37;
+            color: #D4AF37;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(212, 175, 55, 0.2);
+        }
+
+        .btn-danger {
+            background: rgba(180, 70, 50, 0.8);
+            color: white;
+        }
+
+        .status-recording {
+            font-size: 0.8rem;
+            padding: 0.3rem 0.8rem;
+            background: var(--box-bg);
+            border-radius: 1rem;
+            display: inline-block;
+        }
+
+        .correction-box {
+            background: var(--box-bg);
+            border-radius: 1rem;
+            padding: 1rem;
+            margin-top: 1rem;
+            border-left: 3px solid #D4AF37;
+            transition: all 0.3s ease;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .correction-item {
+            margin-bottom: 0.8rem;
+            padding: 0.5rem;
+            border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+        }
+
+        .ayat-error-group {
+            margin-top: 0.8rem;
+            background: rgba(212, 175, 55, 0.1);
+            padding: 0.8rem;
+            border-radius: 0.8rem;
+            transition: all 0.3s ease;
+        }
+
+        .ayat-error-header {
+            font-weight: bold;
+            color: #D4AF37;
+            margin-bottom: 0.5rem;
+            font-size: 1rem;
+        }
+
+        .error-detail {
+            margin-bottom: 0.5rem;
+            padding: 0.3rem 0;
+            border-bottom: 1px dashed rgba(212, 175, 55, 0.2);
+            transition: all 0.2s ease;
+        }
+
+        .error-detail:hover {
+            background: rgba(212, 175, 55, 0.1);
+            padding-left: 0.5rem;
+            border-radius: 0.5rem;
+        }
+
+        .accuracy {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #D4AF37;
+            text-align: center;
+            margin-top: 0.8rem;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 1rem;
+        }
+
+        .loading i {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        audio {
+            width: 100%;
+            margin-top: 0.5rem;
+            border-radius: 2rem;
+        }
+
+        @media (max-width: 900px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            .app-wrapper {
+                padding: 1rem;
+            }
+
+            .header {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .header-actions {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .theme-toggle-btn,
+            .badge {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--scroll-track);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #D4AF37;
+            border-radius: 10px;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .card {
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        .text-success {
+            color: #4ade80;
+        }
+
+        .text-warning {
+            color: #fbbf24;
+        }
+
+        .text-error {
+            color: #f87171;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="canvas-container"></div>
+
+    <div class="app-wrapper">
+        <div class="header">
+            <div class="logo">
+                <h1><i class="fas fa-moon"></i> AI NGAJI</h1>
+                <p>Deteksi Tajwid & Koreksi Bacaan Quran | Belajar Lebih Mudah</p>
+            </div>
+            <div class="header-actions">
+                <button id="themeToggle" class="theme-toggle-btn">
+                    <i class="fas fa-sun" id="themeIcon"></i> <span id="themeText">Mode Terang</span>
+                </button>
+                <div class="badge">
+                    <i class="fas fa-star-of-life"></i> AI Powered Tajwid
+                </div>
+            </div>
+        </div>
+
+        <div class="main-grid">
+            <!-- KOLOM KIRI: Pilih Surat & Teks Quran -->
+            <div class="card">
+                <div class="card-title">
+                    <i class="fas fa-book-quran"></i> Pilih Surat
+                </div>
+                <select id="surahSelect" class="select-surah">
+                    <option value="">Memuat daftar surat...</option>
+                </select>
+
+                <div class="card-title" style="margin-top: 1rem;">
+                    <i class="fas fa-text-height"></i> Teks Quran
+                </div>
+                <div id="surahTextDisplay" class="surah-text-container">
+                    <div class="loading"><i class="fas fa-spinner fa-pulse"></i> Pilih surat untuk menampilkan ayat...
+                    </div>
+                </div>
+                <div class="correction-box" id="tajwidHint">
+                    <i class="fas fa-microphone-alt"></i> <strong>Tips Tajwid:</strong> Rekam atau upload bacaanmu, AI
+                    akan memberikan koreksi detail per ayat.
+                </div>
+            </div>
+
+            <!-- KOLOM KANAN: Rekam, Upload, Hasil Koreksi -->
+            <div class="card">
+                <div class="card-title">
+                    <i class="fas fa-microphone"></i> Rekam / Upload Bacaan
+                </div>
+                <div class="recording-area">
+                    <div class="btn-group">
+                        <button id="recordBtn" class="btn btn-primary"><i class="fas fa-circle"></i> Mulai
+                            Rekam</button>
+                        <button id="stopBtn" class="btn btn-danger" disabled><i class="fas fa-stop"></i>
+                            Hentikan</button>
+                        <input type="file" id="audioFileInput" accept="audio/*" style="display:none;" />
+                        <button id="uploadBtn" class="btn btn-secondary"><i class="fas fa-upload"></i> Upload
+                            Audio</button>
+                    </div>
+                    <div id="recordingStatus" class="status-recording">⚪ Belum ada rekaman</div>
+                    <audio id="audioPlayback" controls style="margin-top: 12px; display: none;"></audio>
+                </div>
+
+                <div class="card-title" style="margin-top: 0.5rem;">
+                    <i class="fas fa-check-double"></i> Hasil Koreksi Tajwid
+                </div>
+                <div id="correctionResult" class="correction-box">
+                    <p><i class="fas fa-microphone"></i> Silakan rekam atau upload bacaan surat yang dipilih...</p>
+                </div>
+                <div id="accuracyScore" class="accuracy"></div>
+            </div>
+        </div>
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.128.0/build/three.module.js"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+
+        // ==================== THREE.JS BINTANG BACKGROUND ====================
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x030b17);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 0, 15);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        container.appendChild(renderer.domElement);
+
+        // Bintang utama
+        const starCount = 4500;
+        const starGeometry = new THREE.BufferGeometry();
+        const starPositions = new Float32Array(starCount * 3);
+        const starColors = new Float32Array(starCount * 3);
+
+        for (let i = 0; i < starCount; i++) {
+            const radius = 40 + Math.random() * 80;
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.acos(2 * Math.random() - 1);
+            starPositions[i * 3] = radius * Math.sin(phi) * Math.cos(theta);
+            starPositions[i * 3 + 1] = radius * Math.sin(phi) * Math.sin(theta) * 0.6;
+            starPositions[i * 3 + 2] = radius * Math.cos(phi) - 10;
+
+            const colorType = Math.random();
+            if (colorType < 0.7) {
+                starColors[i * 3] = 0.85 + Math.random() * 0.15;
+                starColors[i * 3 + 1] = 0.85 + Math.random() * 0.15;
+                starColors[i * 3 + 2] = 1.0;
+            } else if (colorType < 0.9) {
+                starColors[i * 3] = 1.0;
+                starColors[i * 3 + 1] = 0.85 + Math.random() * 0.15;
+                starColors[i * 3 + 2] = 0.7 + Math.random() * 0.25;
+            } else {
+                starColors[i * 3] = 0.7 + Math.random() * 0.3;
+                starColors[i * 3 + 1] = 0.7 + Math.random() * 0.3;
+                starColors[i * 3 + 2] = 1.0;
+            }
+        }
+        starGeometry.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+        starGeometry.setAttribute('color', new THREE.BufferAttribute(starColors, 3));
+
+        const starMaterial = new THREE.PointsMaterial({ size: 0.18, vertexColors: true, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending });
+        const stars = new THREE.Points(starGeometry, starMaterial);
+        scene.add(stars);
+
+        // Bintang jauh
+        const starCountFar = 3500;
+        const starGeoFar = new THREE.BufferGeometry();
+        const posFar = new Float32Array(starCountFar * 3);
+        for (let i = 0; i < starCountFar; i++) {
+            const r = 90 + Math.random() * 100;
+            const theta2 = Math.random() * Math.PI * 2;
+            const phi2 = Math.acos(2 * Math.random() - 1);
+            posFar[i * 3] = r * Math.sin(phi2) * Math.cos(theta2);
+            posFar[i * 3 + 1] = r * Math.sin(phi2) * Math.sin(theta2) * 0.5;
+            posFar[i * 3 + 2] = r * Math.cos(phi2) - 20;
+        }
+        starGeoFar.setAttribute('position', new THREE.BufferAttribute(posFar, 3));
+        const starMatFar = new THREE.PointsMaterial({ color: 0x88aaff, size: 0.09, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending });
+        const starsFar = new THREE.Points(starGeoFar, starMatFar);
+        scene.add(starsFar);
+
+        // Bintang berkedip
+        const twinkleCount = 1800;
+        const twinkleGeo = new THREE.BufferGeometry();
+        const twinklePos = new Float32Array(twinkleCount * 3);
+        for (let i = 0; i < twinkleCount; i++) {
+            twinklePos[i * 3] = (Math.random() - 0.5) * 180;
+            twinklePos[i * 3 + 1] = (Math.random() - 0.5) * 70;
+            twinklePos[i * 3 + 2] = (Math.random() - 0.5) * 100 - 40;
+        }
+        twinkleGeo.setAttribute('position', new THREE.BufferAttribute(twinklePos, 3));
+        const twinkleMat = new THREE.PointsMaterial({ color: 0xffdd99, size: 0.12, transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending });
+        const twinkleStars = new THREE.Points(twinkleGeo, twinkleMat);
+        scene.add(twinkleStars);
+
+        // Nebula
+        const nebulaCount = 1200;
+        const nebulaGeo = new THREE.BufferGeometry();
+        const nebulaPos = new Float32Array(nebulaCount * 3);
+        for (let i = 0; i < nebulaCount; i++) {
+            nebulaPos[i * 3] = (Math.random() - 0.5) * 120;
+            nebulaPos[i * 3 + 1] = (Math.random() - 0.5) * 40 + 5;
+            nebulaPos[i * 3 + 2] = (Math.random() - 0.5) * 80 - 30;
+        }
+        nebulaGeo.setAttribute('position', new THREE.BufferAttribute(nebulaPos, 3));
+        const nebulaMat = new THREE.PointsMaterial({ color: 0x6688aa, size: 0.07, transparent: true, opacity: 0.2, blending: THREE.AdditiveBlending });
+        const nebulaCloud = new THREE.Points(nebulaGeo, nebulaMat);
+        scene.add(nebulaCloud);
+
+        let time = 0;
+        function animateStars() {
+            requestAnimationFrame(animateStars);
+            time += 0.003;
+
+            stars.rotation.y += 0.0002;
+            stars.rotation.x = Math.sin(time * 0.1) * 0.05;
+            starsFar.rotation.y -= 0.00015;
+            starsFar.rotation.x += 0.0001;
+            twinkleStars.rotation.y += 0.00025;
+            nebulaCloud.rotation.y += 0.00008;
+
+            twinkleMat.opacity = 0.55 + Math.sin(time * 1.8) * 0.15;
+            starMaterial.opacity = 0.75 + Math.sin(time * 0.7) * 0.1;
+
+            renderer.render(scene, camera);
+        }
+        animateStars();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // ==================== FITUR TOGGLE TEMA ====================
+        const themeToggleBtn = document.getElementById('themeToggle');
+        const themeIcon = document.getElementById('themeIcon');
+        const themeText = document.getElementById('themeText');
+
+        themeToggleBtn.addEventListener('click', () => {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            if (currentTheme === 'light') {
+                document.documentElement.removeAttribute('data-theme');
+                scene.background.setHex(0x030b17);
+                themeIcon.className = 'fas fa-sun';
+                themeText.innerText = 'Mode Terang';
+            } else {
+                document.documentElement.setAttribute('data-theme', 'light');
+                scene.background.setHex(0xf4f7fc);
+                themeIcon.className = 'fas fa-moon';
+                themeText.innerText = 'Mode Gelap';
+            }
+        });
+
+        // ==================== KONFIGURASI BACKEND ====================
+        const API_BASE = 'http://localhost:8000';
+        let currentSurahId = 1;
+        let surahList = [];
+        let currentAyatsData = [];
+
+        // ==================== LOAD DAFTAR SURAT DARI BACKEND ====================
+        async function loadSurahs() {
+            const select = document.getElementById('surahSelect');
+            select.innerHTML = '<option value="">Memuat...</option>';
+
+            try {
+                const response = await fetch(`${API_BASE}/surahs`);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                surahList = data.surahs || [];
+
+                // Urutkan berdasarkan nomor surat
+                surahList.sort((a, b) => a.number - b.number);
+
+                select.innerHTML = '';
+                surahList.forEach(surah => {
+                    const option = document.createElement('option');
+                    option.value = surah.number;
+                    const ayatText = surah.total_verses ? `${surah.total_verses} ayat` : '? ayat';
+                    option.textContent = `${surah.number}. ${surah.name} (${ayatText})`;
+                    select.appendChild(option);
+                });
+
+                if (surahList.length > 0) {
+                    currentSurahId = surahList[0].number;
+                    select.value = currentSurahId;
+                    loadAyat(currentSurahId);
+                }
+            } catch (error) {
+                console.error('Gagal load surah:', error);
+                select.innerHTML = '<option value="">Gagal memuat surat</option>';
+                document.getElementById('surahTextDisplay').innerHTML = '<p class="loading">❌ Gagal terhubung ke backend. Pastikan server berjalan di port 8000</p>';
+            }
+        }
+
+        // ==================== LOAD AYAT DARI BACKEND ====================
+        async function loadAyat(surahNumber) {
+            const container = document.getElementById('surahTextDisplay');
+            container.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-pulse"></i> Memuat ayat...</div>';
+
+            try {
+                const response = await fetch(`${API_BASE}/ayat/${surahNumber}`);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                const ayats = data.ayats || [];
+
+                if (ayats.length === 0) {
+                    container.innerHTML = '<p>Tidak ada data ayat untuk surat ini.</p>';
+                    return;
+                }
+
+                // Urutkan berdasarkan nomor ayat
+                ayats.sort((a, b) => a.nomor - b.nomor);
+                currentAyatsData = ayats;
+
+                container.innerHTML = '';
+                ayats.forEach(ayat => {
+                    const ayatCard = document.createElement('div');
+                    ayatCard.className = 'ayat-item-card ayat-correct';
+                    ayatCard.setAttribute('data-ayat-nomor', ayat.nomor);
+                    ayatCard.innerHTML = `
+                        <div class="ayat-header">
+                            <span class="ayat-number">${ayat.nomor}</span>
+                        </div>
+                        <p class="arabic-text">${ayat.teks_arab}</p>
+                        <p class="latin-text">${ayat.transliterasi || ''}</p>
+                    `;
+                    container.appendChild(ayatCard);
+                });
+            } catch (error) {
+                console.error('Gagal load ayat:', error);
+                container.innerHTML = '<p class="loading">❌ Gagal memuat ayat. Pastikan endpoint /ayat/{surah_number} tersedia di backend.</p>';
+            }
+        }
+
+        // ==================== HIGHLIGHT AYAT YANG SALAH ====================
+        function highlightAyahInReader(ayahName) {
+            // Hapus highlight sebelumnya
+            document.querySelectorAll('.ayat-item-card').forEach(card => {
+                card.style.border = '';
+                card.style.backgroundColor = '';
+                card.classList.remove('ayat-error', 'ayat-warning');
+            });
+
+            // Parse nomor ayat dari format "Ayat 4" atau "verse_4"
+            let ayahNumber = null;
+            if (ayahName.includes('Ayat')) {
+                ayahNumber = parseInt(ayahName.replace('Ayat ', ''));
+            } else if (ayahName.includes('verse_')) {
+                ayahNumber = parseInt(ayahName.replace('verse_', ''));
+            }
+
+            if (ayahNumber) {
+                const ayatCards = document.querySelectorAll('.ayat-item-card');
+                const targetIndex = ayahNumber - 1;
+
+                if (ayatCards[targetIndex]) {
+                    const targetCard = ayatCards[targetIndex];
+                    targetCard.classList.add('ayat-error');
+                    targetCard.style.border = '2px solid #f87171';
+                    targetCard.style.backgroundColor = 'var(--error-bg)';
+                    targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                    // Animasi blink 3 kali
+                    let blinkCount = 0;
+                    const blinkInterval = setInterval(() => {
+                        targetCard.style.opacity = blinkCount % 2 === 0 ? '0.6' : '1';
+                        blinkCount++;
+                        if (blinkCount > 5) {
+                            clearInterval(blinkInterval);
+                            targetCard.style.opacity = '1';
+                        }
+                    }, 150);
+                }
+            }
+        }
+
+        // ==================== TAMPILKAN HASIL ANALISIS ====================
+        function displayResult(result) {
+            const accuracy = result.accuracy || 0;
+            const correct = result.correct || 0;
+            const wrong = result.wrong || 0;
+            const tajwidResults = result.tajwid_results || [];
+
+            // Reset highlight ayat
+            document.querySelectorAll('.ayat-item-card').forEach(card => {
+                card.classList.remove('ayat-error', 'ayat-warning');
+                card.style.border = '';
+                card.style.backgroundColor = '';
+            });
+
+            // 1. METRIK AKURASI
+            let feedbackHtml = `
+                <div class="correction-item">
+                    <i class="fas fa-chart-line"></i> 
+                    <strong>📊 Skor Kualitas Bacaan:</strong> ${accuracy}%
+                </div>
+                <div class="correction-item">
+                    <i class="fas fa-check-circle"></i> 
+                    <strong>✅ Tajwid Benar:</strong> ${correct} | 
+                    <strong>❌ Tajwid Salah:</strong> ${wrong}
+                </div>
+            `;
+
+            // 2. DAFTAR KESALAHAN PER AYAT
+            if (tajwidResults.length > 0) {
+                feedbackHtml += `<div class="correction-item"><strong><i class="fas fa-list"></i> 📖 Detail Kesalahan per Ayat:</strong></div>`;
+
+                // Kelompokkan berdasarkan ayat
+                const groupedByAyah = {};
+                tajwidResults.forEach(r => {
+                    const ayah = r.ayah || 'Ayat ?';
+                    if (!groupedByAyah[ayah]) groupedByAyah[ayah] = [];
+                    groupedByAyah[ayah].push(r);
+                });
+
+                // Tampilkan setiap ayat yang ada kesalahan
+                for (const [ayah, errors] of Object.entries(groupedByAyah)) {
+                    const hasError = errors.some(e => e.status !== 'correct');
+                    if (!hasError) continue;
+
+                    // Highlight ayat yang salah di Quran reader
+                    highlightAyahInReader(ayah);
+
+                    feedbackHtml += `
+                        <div class="ayat-error-group">
+                            <div class="ayat-error-header">
+                                ⚠️ ${ayah}
+                            </div>
+                            <div style="margin-left: 1rem;">
+                    `;
+
+                    errors.forEach(r => {
+                        const statusIcon = r.status === 'correct' ? '✅' : (r.status === 'warning' ? '⚠️' : '❌');
+                        const timestamp = (r.start && r.end) ? `[${parseFloat(r.start).toFixed(1)}s - ${parseFloat(r.end).toFixed(1)}s]` : '';
+                        const statusClass = r.status === 'correct' ? 'text-success' : (r.status === 'warning' ? 'text-warning' : 'text-error');
+
+                        feedbackHtml += `
+                            <div class="error-detail">
+                                <div><span style="font-family: monospace;">${timestamp}</span> ${statusIcon} <strong class="${statusClass}">${r.rule || 'Tajwid'}</strong></div>
+                                <div style="font-size: 0.85rem; margin-left: 1.2rem;">
+                                    <span style="color: #D4AF37;">Kata:</span> "${r.matched_text || '-'}"
+                                </div>
+                                <div style="font-size: 0.8rem; margin-left: 1.2rem;" class="${statusClass}">
+                                    ${r.message || (r.status === 'correct' ? 'Bacaan benar' : 'Perlu perbaikan')}
+                                </div>
+                                ${r.score ? `<div style="font-size: 0.7rem; margin-left: 1.2rem; opacity: 0.7;">Skor: ${r.score}</div>` : ''}
+                            </div>
+                        `;
+                    });
+
+                    feedbackHtml += `</div></div>`;
+                }
+            } else {
+                feedbackHtml += `<div class="correction-item"><i class="fas fa-info-circle"></i> Tidak ada aturan tajwid yang terdeteksi.</div>`;
+            }
+
+            // 3. SARAN PERBAIKAN
+            if (accuracy >= 85) {
+                feedbackHtml += `<div class="correction-item" style="margin-top: 0.5rem;">🌟✨ Masha Allah! Bacaan sangat baik. Pertahankan!</div>`;
+            } else if (accuracy >= 70) {
+                feedbackHtml += `<div class="correction-item" style="margin-top: 0.5rem;">📖 Bacaan cukup baik. Perhatikan kesalahan di atas.</div>`;
+            } else {
+                feedbackHtml += `<div class="correction-item" style="margin-top: 0.5rem;">💪 Tetap semangat! Coba ulangi pelan-pelan sesuai panduan di atas.</div>`;
+            }
+
+            const correctionResultDiv = document.getElementById('correctionResult');
+            const accuracyScoreDiv = document.getElementById('accuracyScore');
+            const recordingStatusSpan = document.getElementById('recordingStatus');
+
+            correctionResultDiv.innerHTML = feedbackHtml;
+            accuracyScoreDiv.innerHTML = `✨ Akurasi Tajwid: ${accuracy}% ✨`;
+            recordingStatusSpan.innerHTML = '✅ Analisis selesai';
+
+            // Scroll ke hasil pertama yang error
+            const firstError = document.querySelector('.ayat-error-group');
+            if (firstError) firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        // ==================== REKAM, UPLOAD, DAN ANALISIS ====================
+        let mediaRecorderObj = null;
+        let audioChunks = [];
+        let isRecordingActive = false;
+        let recordedBlob = null;
+
+        const recordBtn = document.getElementById('recordBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const fileInput = document.getElementById('audioFileInput');
+        const audioPlayback = document.getElementById('audioPlayback');
+        const recordingStatusSpan = document.getElementById('recordingStatus');
+
+        async function startRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorderObj = new MediaRecorder(stream);
+                audioChunks = [];
+
+                mediaRecorderObj.ondataavailable = event => {
+                    if (event.data.size > 0) audioChunks.push(event.data);
+                };
+
+                mediaRecorderObj.onstop = () => {
+                    recordedBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                    const audioUrl = URL.createObjectURL(recordedBlob);
+                    audioPlayback.src = audioUrl;
+                    audioPlayback.style.display = 'block';
+                    recordingStatusSpan.innerHTML = '✅ Rekaman selesai! Mengirim ke AI...';
+                    sendToBackend(recordedBlob);
+                    stream.getTracks().forEach(track => track.stop());
+                };
+
+                mediaRecorderObj.start();
+                isRecordingActive = true;
+                recordBtn.disabled = true;
+                stopBtn.disabled = false;
+                recordingStatusSpan.innerHTML = '🔴 Sedang merekam... bacalah surat dengan tartil';
+            } catch (err) {
+                recordingStatusSpan.innerHTML = '❌ Izin mikrofon diperlukan untuk merekam';
+                console.error(err);
+            }
+        }
+
+        function stopRecording() {
+            if (mediaRecorderObj && isRecordingActive && mediaRecorderObj.state !== 'inactive') {
+                mediaRecorderObj.stop();
+                isRecordingActive = false;
+                recordBtn.disabled = false;
+                stopBtn.disabled = true;
+            }
+        }
+
+        async function sendToBackend(audioBlob) {
+            const correctionResultDiv = document.getElementById('correctionResult');
+            correctionResultDiv.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-pulse"></i> 🤖 AI sedang menganalisis bacaan...</div>';
+            document.getElementById('accuracyScore').innerHTML = '';
+
+            const formData = new FormData();
+            formData.append('surah', currentSurahId);
+            formData.append('file', audioBlob, 'recording.wav');
+            // Tambahkan ini di header fetch
+            const response = await fetch(`${API_BASE}/analyze`, {
+                method: 'POST',
+                headers: {
+                    'X-API-Key': 'QyRyHclbbjIWMvSUYTc8uiblDWDMin6IgQ-HVUTsoCA'  // Ganti dengan API_KEY dari .env
+                },
+                body: formData
+            });
+            try {
+                const response = await fetch(`${API_BASE}/analyze`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+
+                const result = await response.json();
+                displayResult(result);
+
+            } catch (error) {
+                console.error('Analisis gagal:', error);
+                correctionResultDiv.innerHTML = `
+                    <div class="correction-item">
+                        <i class="fas fa-exclamation-triangle"></i> 
+                        <strong>❌ Gagal terhubung ke AI backend</strong>
+                    </div>
+                    <div class="correction-item">Pastikan server backend berjalan di ${API_BASE}</div>
+                    <div class="correction-item">Error: ${error.message}</div>
+                `;
+                document.getElementById('accuracyScore').innerHTML = '';
+                recordingStatusSpan.innerHTML = '⚠️ Gagal analisis';
+            }
+        }
+
+        // Event listeners
+        recordBtn.addEventListener('click', startRecording);
+        stopBtn.addEventListener('click', stopRecording);
+        uploadBtn.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                recordedBlob = file;
+                const audioUrl = URL.createObjectURL(file);
+                audioPlayback.src = audioUrl;
+                audioPlayback.style.display = 'block';
+                recordingStatusSpan.innerHTML = '📁 File audio diupload! Mengirim ke AI...';
+                sendToBackend(file);
+            }
+        });
+
+        // Event saat surat berubah
+        const surahSelect = document.getElementById('surahSelect');
+        surahSelect.addEventListener('change', (e) => {
+            currentSurahId = parseInt(e.target.value);
+            if (currentSurahId) {
+                loadAyat(currentSurahId);
+                document.getElementById('correctionResult').innerHTML = '<p><i class="fas fa-microphone"></i> Surat berubah, silakan rekam/upload bacaan untuk koreksi tajwid.</p>';
+                document.getElementById('accuracyScore').innerHTML = '';
+            }
+        });
+
+        // Inisialisasi
+        loadSurahs();
+
+        console.log("✨ AI NGAJI siap | Terintegrasi dengan backend FastAPI | Deteksi kesalahan per ayat ✨");
+    </script>
+</body>
+
+</html>

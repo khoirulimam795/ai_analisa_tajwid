@@ -1,0 +1,26 @@
+# Core ML & Audio
+torch>=2.1.0
+torchaudio>=2.1.0
+librosa>=0.10.0
+numpy>=1.24.0
+
+# WhisperX (dari GitHub, bukan PyPI)
+whisperx @ git+https://github.com/m-bain/whisperx.git
+
+# Alignment & Phoneme
+montreal-forced-aligner>=2.2.0
+textgrid>=1.6.0
+
+# API & Web
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+python-multipart>=0.0.6
+
+# Audio I/O
+scipy>=1.11.0
+sounddevice>=0.4.6
+pydub>=0.25.1
+
+# Utilities
+requests>=2.31.0
+rich>=13.7.0
